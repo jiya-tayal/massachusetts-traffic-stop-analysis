@@ -19,7 +19,7 @@ library(ggplot2)
 
 # Load Massachusetts police stops dataset
 massachusetts_data <- read_csv(
-  "~/Desktop/Past Classes/stats310/data/ma_statewide_2020_04_01.csv",
+  "../data/ma_statewide_2020_04_01.csv",
   show_col_types = FALSE
 )
 ```
