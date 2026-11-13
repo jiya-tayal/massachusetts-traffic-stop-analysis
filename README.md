@@ -68,18 +68,6 @@ https://openpolicing.stanford.edu/data/
 
 The original Massachusetts traffic-stop dataset is not included in this repository. Refer to the source above for access to the data.
 
-## Reproducing the Analysis
-
-The analysis was conducted in R using the tidyverse, dplyr, and ggplot2 packages.
-
-To reproduce the analysis:
-
-1. Download the Massachusetts traffic-stop dataset from the Stanford Open Policing Project.
-2. Install the required R packages.
-3. Open `analysis/traffic_stop_analysis.Rmd` in RStudio.
-4. Update the dataset path to point to your downloaded CSV file.
-5. Knit the R Markdown file to run the analysis and generate the output.
-
 ## Limitations
 
 The analysis is observational and cannot establish causation. Additional factors, including traffic-stop reasons, geographic differences, socioeconomic conditions, and individual police department policies, may help explain the observed patterns.
@@ -91,3 +79,16 @@ The custom search-efficiency index is an exploratory measure developed for this 
 - `README.md` — Project overview, research questions, methodology, findings, and contributions.
 - `analysis/` — Contains the R Markdown file with the statistical analysis and visualizations.
 - `report/` — Contains the final research paper in PDF format.
+
+## Reproducing the Analysis
+
+The analysis was conducted in R using the tidyverse, dplyr, and ggplot2 packages.
+
+To reproduce the analysis:
+
+1. Download the Massachusetts traffic-stop dataset from the [Stanford Open Policing Project](https://openpolicing.stanford.edu/data/).
+2. Create a folder named `data` in the root directory of this repository.
+3. Place the downloaded CSV file (`ma_statewide_2020_04_01.csv`) inside the `data` folder.
+4. Open the R Markdown file in the `analysis/` folder using RStudio.
+5. Set the working directory to the R Markdown file's location using **Session → Set Working Directory → To Source File Location**.
+6. Knit the R Markdown file to generate the PDF report.
