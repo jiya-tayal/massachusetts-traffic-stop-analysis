@@ -88,6 +88,19 @@ The custom search-efficiency index is an exploratory measure developed for this 
 
 ## Repository Contents
 
-- `README.md` — Project overview, research questions, methodology, findings, and contributions.
-- `analysis/` — Contains the R Markdown file with the statistical analysis and visualizations.
-- `report/` — Contains the final research paper in PDF format.
+- `README.md` — Project overview, methodology, findings, and contributions.
+- `analysis/` — R Markdown analysis and supporting code.
+- `report/` — Final research paper, if included.
+
+## Reproducing the Analysis
+
+The analysis was conducted in R using the tidyverse, dplyr, and ggplot2 packages.
+
+To reproduce the analysis:
+
+1. Download the Massachusetts traffic-stop dataset from the [Stanford Open Policing Project](https://openpolicing.stanford.edu/data/).
+2. Create a folder named `data` in the root directory of this repository.
+3. Place the downloaded CSV file (`ma_statewide_2020_04_01.csv`) inside the `data` folder.
+4. Open the R Markdown file in the `analysis/` folder using RStudio.
+5. Set the working directory to the R Markdown file's location using **Session → Set Working Directory → To Source File Location**.
+6. Knit the R Markdown file to generate the PDF report.
