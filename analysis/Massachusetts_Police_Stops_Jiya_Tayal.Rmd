@@ -1,0 +1,465 @@
+---
+title: "Inference: Massachusetts Police Stops"
+author: "Jiya Tayal"
+date: "2026-05-04"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+## Load Data
+
+```{r}
+library(tidyverse)
+library(readr)
+library(dplyr)
+library(ggplot2)
+
+# Load Massachusetts police stops dataset
+massachusetts_data <- read_csv(
+  "../data/ma_statewide_2020_04_01.csv",
+  show_col_types = FALSE
+)
+```
+
+## Inspect Structure
+
+```{r}
+glimpse(massachusetts_data)
+```
+
+## Data Overview
+
+```{r}
+nrow(massachusetts_data) # total stops
+```
+
+### Key Variables
+
+```{r}
+massachusetts_data %>%
+  select(subject_race, subject_sex, search_conducted,
+         contraband_found, arrest_made) %>%
+  summary()
+```
+
+## Distribution of Stops by Race
+
+```{r}
+# Clean race labels
+massachusetts_data <- massachusetts_data %>%
+  mutate(
+    subject_race = recode(
+      subject_race,
+      "Black or African American" = "Black",
+      "Hispanic or Latino" = "Hispanic"
+    )
+  )
+
+# Compute proportions
+race_dist <- massachusetts_data %>%
+  count(subject_race) %>%
+  mutate(percent = n / sum(n))
+
+ggplot(race_dist,
+       aes(x = reorder(subject_race, percent), y = percent)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  geom_text(
+    aes(label = scales::percent(percent, accuracy = 0.1)),
+    hjust = -0.1
+  ) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.15))) +
+  labs(
+    title = "Proportion of Stops by Race",
+    x = "Race",
+    y = "Proportion"
+  ) +
+  theme_minimal()
+```
+
+## Distribution of Stops by Gender
+
+```{r}
+gender_dist <- massachusetts_data %>%
+  count(subject_sex) %>%
+  mutate(percent = n / sum(n))
+
+ggplot(gender_dist, aes(x = subject_sex, y = percent)) +
+  geom_bar(stat = "identity") +
+  labs(
+    title = "Proportion of Stops by Gender",
+    x = "Gender",
+    y = "Proportion"
+  ) +
+  theme_minimal()
+```
+
+## Severity by Gender
+
+```{r}
+gender_severity <- massachusetts_data %>%
+  group_by(subject_sex) %>%
+  summarize(
+    search_rate = mean(search_conducted == TRUE, na.rm = TRUE),
+    arrest_rate = mean(arrest_made == TRUE, na.rm = TRUE)
+  )
+
+gender_severity
+```
+
+### Plot
+
+```{r}
+gender_severity %>%
+  pivot_longer(
+    cols = c(search_rate, arrest_rate),
+    names_to = "type",
+    values_to = "rate"
+  ) %>%
+  ggplot(aes(x = subject_sex, y = rate, fill = type)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(
+    title = "Stop Severity by Gender",
+    x = "Gender",
+    y = "Rate"
+  ) +
+  theme_minimal()
+```
+
+## Severity by Race
+
+```{r}
+# Clean race labels
+massachusetts_data <- massachusetts_data %>%
+  mutate(
+    subject_race = recode(
+      subject_race,
+      "Black or African American" = "Black",
+      "Hispanic or Latino" = "Hispanic"
+    )
+  )
+
+# Compute severity rates
+race_severity <- massachusetts_data %>%
+  group_by(subject_race) %>%
+  summarize(
+    search_rate = mean(search_conducted == TRUE, na.rm = TRUE),
+    arrest_rate = mean(arrest_made == TRUE, na.rm = TRUE)
+  )
+
+# Convert to long format
+race_severity_long <- race_severity %>%
+  pivot_longer(
+    cols = c(search_rate, arrest_rate),
+    names_to = "type",
+    values_to = "rate"
+  )
+
+# Plot (flipped for readability)
+ggplot(
+  race_severity_long,
+  aes(x = reorder(subject_race, rate), y = rate, fill = type)
+) +
+  geom_bar(stat = "identity", position = "dodge") +
+  coord_flip() +
+  labs(
+    title = "Stop Severity by Race",
+    x = "Race",
+    y = "Rate"
+  ) +
+  theme_minimal()
+```
+
+## Race + Gender Intersection
+
+```{r}
+# Compute intersection rates
+intersection <- massachusetts_data %>%
+  group_by(subject_race, subject_sex) %>%
+  summarize(
+    search_rate = mean(search_conducted == TRUE, na.rm = TRUE)
+  )
+```
+
+### Plot
+
+```{r}
+ggplot(
+  intersection,
+  aes(x = subject_race, y = search_rate, fill = subject_sex)
+) +
+  geom_bar(stat = "identity", position = "dodge") +
+  coord_flip() +
+  labs(
+    title = "Search Rate by Race and Gender",
+    x = "Race",
+    y = "Search Rate"
+  ) +
+  theme_minimal()
+```
+
+## Escalation Pattern (Search -> Contraband -> Arrest)
+
+```{r}
+escalation <- massachusetts_data %>%
+  summarize(
+    searched = mean(search_conducted == TRUE, na.rm = TRUE),
+    contraband = mean(contraband_found == TRUE, na.rm = TRUE),
+    arrested = mean(arrest_made == TRUE, na.rm = TRUE)
+  )
+
+escalation
+```
+
+### Plot
+
+```{r}
+escalation_long <- escalation %>%
+  pivot_longer(
+    cols = everything(),
+    names_to = "stage",
+    values_to = "rate"
+  )
+
+ggplot(escalation_long, aes(x = stage, y = rate)) +
+  geom_bar(stat = "identity") +
+  labs(
+    title = "Escalation of Police Stops",
+    x = "Stage",
+    y = "Rate"
+  ) +
+  theme_minimal()
+```
+
+## Confidence Interval for Differences in Gender
+
+```{r}
+# Remove missing gender
+gender_clean <- massachusetts_data %>%
+  filter(!is.na(subject_sex))
+
+# Counts
+male_count <- sum(gender_clean$subject_sex == "male")
+female_count <- sum(gender_clean$subject_sex == "female")
+
+total_male_female <- male_count + female_count
+
+# Two-proportion confidence interval
+prop.test(
+  c(male_count, female_count),
+  c(total_male_female, total_male_female),
+  conf.level = 0.95,
+  correct = FALSE
+)
+```
+
+## Confidence Interval for Differences in Race
+
+```{r}
+# Remove missing race
+race_clean <- massachusetts_data %>%
+  filter(!is.na(subject_race))
+
+# Counts
+white_count <- sum(race_clean$subject_race == "white")
+nonwhite_count <- sum(race_clean$subject_race != "white")
+
+total_race <- white_count + nonwhite_count
+
+# Two-proportion confidence interval
+prop.test(
+  c(white_count, nonwhite_count),
+  c(total_race, total_race),
+  conf.level = 0.95,
+  correct = FALSE
+)
+```
+
+## Search Rate and Arrest Rate Confidence Intervals
+
+### Gender Confidence Intervals
+
+```{r}
+gender_ci <- massachusetts_data %>%
+  group_by(subject_sex) %>%
+  summarize(
+    n = n(),
+    search_success = sum(search_conducted == TRUE, na.rm = TRUE),
+    arrest_success = sum(arrest_made == TRUE, na.rm = TRUE),
+    search_ci = list(prop.test(search_success, n)$conf.int),
+    arrest_ci = list(prop.test(arrest_success, n)$conf.int)
+  ) %>%
+  mutate(
+    search_low = sapply(search_ci, `[`, 1),
+    search_high = sapply(search_ci, `[`, 2),
+    arrest_low = sapply(arrest_ci, `[`, 1),
+    arrest_high = sapply(arrest_ci, `[`, 2)
+  ) %>%
+  select(-search_ci, -arrest_ci)
+
+gender_ci
+```
+
+### Race Confidence Intervals
+
+```{r}
+race_ci <- massachusetts_data %>%
+  group_by(subject_race) %>%
+  summarize(
+    n = n(),
+    search_success = sum(search_conducted == TRUE, na.rm = TRUE),
+    arrest_success = sum(arrest_made == TRUE, na.rm = TRUE),
+    search_ci = list(prop.test(search_success, n)$conf.int),
+    arrest_ci = list(prop.test(arrest_success, n)$conf.int)
+  ) %>%
+  mutate(
+    search_low = sapply(search_ci, `[`, 1),
+    search_high = sapply(search_ci, `[`, 2),
+    arrest_low = sapply(arrest_ci, `[`, 1),
+    arrest_high = sapply(arrest_ci, `[`, 2)
+  ) %>%
+  select(-search_ci, -arrest_ci)
+
+race_ci
+```
+
+## Logistic Model for Search Rate Based on Race and Gender
+
+```{r}
+model1 <- glm(
+  search_conducted ~ subject_race + subject_sex,
+  data = massachusetts_data,
+  family = binomial
+)
+
+summary(model1)
+```
+
+### Model with Race and Gender Interaction
+
+```{r}
+model2 <- glm(
+  search_conducted ~ subject_race * subject_sex,
+  data = massachusetts_data,
+  family = binomial
+)
+
+summary(model2)
+```
+
+## Escalation of Police Stops Confidence Intervals
+
+```{r}
+escalation_ci <- massachusetts_data %>%
+  summarize(
+    n = n(),
+    searched_success = sum(search_conducted == TRUE, na.rm = TRUE),
+    contraband_success = sum(contraband_found == TRUE, na.rm = TRUE),
+    arrested_success = sum(arrest_made == TRUE, na.rm = TRUE)
+  )
+
+get_ci <- function(success, n) {
+  prop.test(success, n)$conf.int
+}
+
+escalation_ci <- escalation_ci %>%
+  mutate(
+    search_rate = searched_success / n,
+    contraband_rate = contraband_success / n,
+    arrest_rate = arrested_success / n,
+    search_ci = list(get_ci(searched_success, n)),
+    contraband_ci = list(get_ci(contraband_success, n)),
+    arrest_ci = list(get_ci(arrested_success, n))
+  ) %>%
+  mutate(
+    search_low = sapply(search_ci, `[`, 1),
+    search_high = sapply(search_ci, `[`, 2),
+    contraband_low = sapply(contraband_ci, `[`, 1),
+    contraband_high = sapply(contraband_ci, `[`, 2),
+    arrest_low = sapply(arrest_ci, `[`, 1),
+    arrest_high = sapply(arrest_ci, `[`, 2)
+  ) %>%
+  select(-search_ci, -contraband_ci, -arrest_ci)
+
+escalation_ci
+```
+
+# Extended Analysis: Bias Index
+
+```{r}
+# Create a bias index to compare how often groups are searched
+# relative to how often contraband is actually found
+
+bias_index <- massachusetts_data %>%
+  # Remove missing race and gender values
+  filter(!is.na(subject_race), !is.na(subject_sex)) %>%
+
+  # Group data by race and gender
+  group_by(subject_race, subject_sex) %>%
+
+  # Compute totals and rates for each demographic group
+  summarise(
+    # Total number of stops
+    total_stops = n(),
+
+    # Number of searches conducted
+    searches = sum(search_conducted == TRUE, na.rm = TRUE),
+
+    # Number of searches where contraband was found
+    contraband_found_total = sum(contraband_found == TRUE, na.rm = TRUE),
+
+    # Search rate: proportion of all stops that resulted in a search
+    search_rate = searches / total_stops,
+
+    # Hit rate: proportion of searches that resulted in contraband being found
+    hit_rate = contraband_found_total / searches,
+
+    # Bias index: search rate divided by search success
+    # Higher values suggest more searches relative to contraband findings
+    bias_index = search_rate / hit_rate,
+
+    .groups = "drop"
+  ) %>%
+  # Remove groups with invalid calculations
+  filter(
+    searches > 0,
+    !is.na(hit_rate),
+    !is.infinite(bias_index)
+  )
+
+# Display table
+bias_index
+```
+
+## Create Visualization
+
+```{r}
+ggplot(
+  bias_index,
+  aes(
+    x = subject_race,
+    y = bias_index,
+    fill = subject_sex
+  )
+) +
+  # Create grouped bar chart
+  geom_col(position = "dodge") +
+
+  # Flip coordinates for readability
+  coord_flip() +
+
+  # Add labels and title
+  labs(
+    title = "Bias Index by Race and Gender",
+    subtitle = "Search Rate Divided by Contraband Hit Rate",
+    x = "Race",
+    y = "Bias Index",
+    fill = "Gender"
+  ) +
+
+  # Clean theme
+  theme_minimal()
+```

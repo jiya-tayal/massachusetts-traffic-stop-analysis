@@ -18,11 +18,13 @@ The study analyzes approximately 3.4 million Massachusetts traffic stops recorde
 ## Methods & Analysis
 
 ### Exploratory Data Analysis
+
 - Examined the distribution of traffic stops across racial and gender groups.
 - Calculated and visualized search, arrest, and contraband discovery rates.
 - Compared outcomes across combined race and gender categories.
 
 ### Statistical Inference
+
 - Constructed 95% confidence intervals for differences in stop proportions and demographic search and arrest rates.
 - Used logistic regression to examine the relationship between driver demographics and search outcomes.
 - Developed an interaction model to investigate the combined relationship between race and gender and the likelihood of a search.
@@ -34,6 +36,8 @@ Developed a custom index comparing search frequency with the rate of contraband 
 **Search-Efficiency Index = Search Rate / Contraband Hit Rate**
 
 The index was calculated across race and gender groups to examine whether higher search frequencies corresponded to proportionally higher contraband discovery rates. It provided an additional descriptive perspective on differences in search outcomes.
+
+This index is an exploratory measure developed for this project, not a standardized or validated measure of discriminatory policing.
 
 ## Key Findings
 
@@ -63,6 +67,18 @@ Stanford Open Policing Project
 https://openpolicing.stanford.edu/data/
 
 The original Massachusetts traffic-stop dataset is not included in this repository. Refer to the source above for access to the data.
+
+## Reproducing the Analysis
+
+The analysis was conducted in R using the tidyverse, dplyr, and ggplot2 packages.
+
+To reproduce the analysis:
+
+1. Download the Massachusetts traffic-stop dataset from the Stanford Open Policing Project.
+2. Install the required R packages.
+3. Open `analysis/traffic_stop_analysis.Rmd` in RStudio.
+4. Update the dataset path to point to your downloaded CSV file.
+5. Knit the R Markdown file to run the analysis and generate the output.
 
 ## Limitations
 
